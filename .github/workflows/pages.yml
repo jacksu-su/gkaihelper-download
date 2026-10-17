@@ -1,0 +1,35 @@
+name: Publish original APK
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - name: Prepare byte-identical original APK
+        run: |
+          mkdir -p public
+          cat package-1.bin package-2.bin > public/app.apk
+          echo 'af7a2b1e00f0ca00584cf6291cbad1d01c926ea2c70dcaec19359a87791ca735  public/app.apk' | sha256sum --check
+          test "$(wc -c < public/app.apk)" -eq 26891270
+          cp index.html CNAME public/
+          touch public/.nojekyll
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+      - name: Deploy original APK
+        id: deployment
+        uses: actions/deploy-pages@v4
